@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cocktail Pivot Table</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0d18;--bg2:#12121f;--bg3:#181828;--bg4:#1e1e30;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --gold:#c9a84c;--gold-dim:rgba(201,168,76,.14);
+  --green:#4fa060;--green-bg:rgba(79,160,96,.17);--green-tx:#7dd890;
+  --amber:#c9913a;--amber-bg:rgba(201,145,58,.16);--amber-tx:#e0b060;
+  --red:#b84040;--red-bg:rgba(184,64,64,.14);--red-tx:#d88080;
+  --blue:#3a8cc9;--blue-bg:rgba(58,140,201,.14);--blue-tx:#80c4e0;
+  --text:#ddd8cc;--dim:rgba(221,216,204,.4);--dim2:rgba(221,216,204,.2);
+  --rh:36px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:12px;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOP BAR */
+.topbar{flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border2);padding:9px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:3px;color:var(--gold);}
+.topbar-sub{font-size:10px;color:var(--dim);font-weight:300;}
+
+/* LANG SWITCHER */
+.lang-sw{display:flex;gap:3px;margin-left:auto;}
+.lang-btn{font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:2px;padding:3px 9px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer;transition:all .15s;}
+.lang-btn:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
+.lang-btn.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+
+/* LEGEND */
+.legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--dim);}
+.leg-sq{width:11px;height:11px;border-radius:2px;}
+.leg-sq.have{background:var(--green-bg);border:1px solid var(--green);}
+.leg-sq.miss{background:var(--red-bg);border:1px solid var(--red);}
+
+/* STATS BAR */
+.statsbar{flex-shrink:0;background:var(--bg3);border-bottom:1px solid var(--border);padding:6px 14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.stat{font-size:11px;color:var(--dim);}
+.stat strong{font-weight:600;color:var(--text);}
+.stat.s-ready strong{color:var(--green-tx);}
+.stat.s-close strong{color:var(--amber-tx);}
+.stat.s-owned strong{color:var(--gold);}
+.filter-group{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;}
+.fbtn{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:1.5px;padding:3px 9px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer;transition:all .15s;}
+.fbtn:hover,.fbtn.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+
+/* BUY NEXT PANEL */
+.buy-panel{flex-shrink:0;background:var(--bg4);border-bottom:1px solid var(--border);}
+.buy-toggle{width:100%;padding:6px 14px;background:none;border:none;color:var(--dim);font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:3px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;}
+.buy-toggle:hover{color:var(--gold);}
+.buy-content{display:none;padding:8px 14px 10px;overflow-x:auto;}
+.buy-content.open{display:block;}
+.buy-cards{display:flex;gap:8px;width:max-content;}
+.buy-card{background:var(--bg2);border:1px solid var(--border2);padding:10px 12px;min-width:155px;max-width:185px;position:relative;}
+.buy-rank{position:absolute;top:5px;right:8px;font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--dim2);}
+.buy-name{font-size:11.5px;font-weight:500;color:var(--text);margin-bottom:5px;padding-right:22px;line-height:1.3;}
+.buy-cat{font-family:'Bebas Neue',sans-serif;font-size:8px;letter-spacing:2px;margin-bottom:5px;display:block;}
+.buy-unlocks{font-size:10px;color:var(--green-tx);margin-bottom:2px;font-weight:500;}
+.buy-close{font-size:10px;color:var(--amber-tx);margin-bottom:3px;}
+.buy-names{font-size:9px;color:var(--dim);line-height:1.5;font-style:italic;}
+.buy-empty{font-size:11px;color:var(--dim);padding:6px 0;font-style:italic;}
+
+
+/* ING FILTER BAR */
+.ing-bar{flex-shrink:0;background:var(--bg3);border-bottom:1px solid var(--border);padding:5px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:34px;}
+.ing-bar-label{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:2.5px;color:var(--dim);white-space:nowrap;flex-shrink:0;}
+.ing-chips{display:flex;gap:4px;flex-wrap:wrap;align-items:center;flex:1;}
+.ing-chip{display:inline-flex;align-items:center;gap:4px;background:rgba(201,168,76,.15);border:1px solid var(--gold);color:var(--gold);font-size:10px;padding:2px 7px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;}
+.ing-chip-x{cursor:pointer;opacity:.6;font-size:12px;line-height:1;transition:opacity .15s;}
+.ing-chip-x:hover{opacity:1;}
+.ing-hint{font-size:10px;color:var(--dim2);font-style:italic;font-family:'Inter',sans-serif;}
+.ing-sel{background:var(--bg4);border:1px solid var(--border2);color:var(--dim);font-size:10px;padding:3px 6px;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;cursor:pointer;outline:none;max-width:180px;}
+.ing-sel:hover{border-color:rgba(255,255,255,.25);color:var(--text);}
+.ing-clear{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:1.5px;padding:3px 9px;border:1px solid var(--red);background:var(--red-bg);color:var(--red-tx);cursor:pointer;transition:all .15s;display:none;}
+.ing-clear:hover{background:rgba(184,64,64,.25);}
+
+/* TABLE */
+.table-wrap{flex:1;overflow:auto;}
+table{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;}
+thead tr:first-child th{position:sticky;top:0;z-index:20;background:var(--bg2);}
+thead tr:nth-child(2) th{position:sticky;top:67px;z-index:19;background:var(--bg2);}
+.col-ing{position:sticky;left:0;z-index:15;background:var(--bg2);min-width:168px;max-width:168px;width:168px;}
+thead .col-ing{z-index:25;}
+.col-c{min-width:62px;max-width:62px;width:62px;}
+th{border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:bottom;}
+
+.th-ing-wrap{padding:8px 10px;display:flex;flex-direction:column;gap:3px;border-bottom:2px solid var(--gold)!important;}
+.th-ing-label{font-family:'Bebas Neue',sans-serif;letter-spacing:2px;font-size:10px;color:var(--gold);}
+.ctrl-row{display:flex;gap:4px;}
+.mini-btn{font-size:8px;padding:1px 5px;border:1px solid var(--border2);background:transparent;color:var(--dim2);cursor:pointer;transition:all .15s;}
+.mini-btn:hover{background:rgba(255,255,255,.04);color:var(--dim);}
+
+.th-c-wrap{padding:5px 4px 7px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px;}
+.th-method{font-size:13px;}
+.th-cname{font-family:'Bebas Neue',sans-serif;font-size:10px;letter-spacing:.8px;color:var(--text);line-height:1.15;text-align:center;white-space:pre-line;}
+.th-c-wrap.na .th-cname{color:var(--blue-tx);}
+.fb{font-family:'Bebas Neue',sans-serif;font-size:8.5px;letter-spacing:.8px;padding:1px 4px;border-radius:2px;display:inline-block;margin-top:1px;white-space:nowrap;}
+.fb-ready{background:var(--green-bg);color:var(--green-tx);border:1px solid rgba(79,160,96,.3);}
+.fb-close{background:var(--amber-bg);color:var(--amber-tx);border:1px solid rgba(201,145,58,.3);}
+.fb-far{background:var(--red-bg);color:var(--red-tx);border:1px solid rgba(184,64,64,.25);}
+.fbar{width:40px;height:2px;background:rgba(255,255,255,.07);border-radius:1px;overflow:hidden;margin-top:1px;}
+.ffill{height:100%;border-radius:1px;transition:width .3s,background .3s;}
+.th-sum-ing{padding:3px 10px;font-size:9px;color:var(--dim);border-bottom:2px solid rgba(255,255,255,.1)!important;font-style:italic;}
+.th-sum-c{padding:3px 3px;text-align:center;border-bottom:2px solid rgba(255,255,255,.1)!important;font-size:9px;color:var(--dim2);}
+
+tbody tr{height:var(--rh);}
+.row-cat td{padding:4px 10px;font-family:'Bebas Neue',sans-serif;font-size:8.5px;letter-spacing:4px;background:var(--bg3)!important;border-bottom:1px solid rgba(255,255,255,.04);}
+.row-cat td:not(.col-ing){background:var(--bg3)!important;}
+.ing-cell{padding:0 8px 0 5px;display:flex;align-items:center;gap:6px;height:var(--rh);}
+.ing-cb{width:12px;height:12px;cursor:pointer;accent-color:var(--green);flex-shrink:0;}
+.ing-lbl{font-size:11px;font-weight:400;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;user-select:none;transition:color .15s;}
+.ing-lbl.owned{color:var(--green-tx);}
+tbody td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);}
+.data-cell{text-align:center;vertical-align:middle;padding:3px 2px;font-size:9.5px;font-weight:500;transition:background .2s;position:relative;}
+.data-cell.used-have{background:var(--green-bg);color:var(--green-tx);}
+.data-cell.used-miss{background:var(--red-bg);color:var(--red-tx);}
+.data-cell.used-miss::after{content:'x';position:absolute;top:1px;right:2px;font-size:6px;opacity:.4;}
+.data-cell.na-col.used-have{background:var(--blue-bg);color:var(--blue-tx);}
+.data-cell.na-col.used-miss{background:rgba(184,64,64,.12);color:var(--red-tx);}
+.data-cell.unused{color:var(--dim2);}
+tbody tr:not(.row-cat):hover .col-ing{background:#1a1a2c!important;}
+tbody tr:not(.row-cat):hover td{background:rgba(255,255,255,.015);}
+tbody tr:not(.row-cat):hover td.used-have{background:rgba(79,160,96,.24);}
+tbody tr:not(.row-cat):hover td.used-miss{background:rgba(184,64,64,.2);}
+tbody tr:not(.row-cat):hover td.na-col.used-have{background:rgba(58,140,201,.22);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title" id="ui-title"></div>
+    <div class="topbar-sub" id="ui-sub"></div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="leg-sq have"></div><span id="ui-leg-have"></span></div>
+    <div class="leg"><div class="leg-sq miss"></div><span id="ui-leg-miss"></span></div>
+    <div class="leg"><span style="color:var(--blue-tx);font-size:13px">&#x1F9C3;</span><span id="ui-leg-na"></span></div>
+  </div>
+  <div class="lang-sw">
+    <button class="lang-btn active" data-l="en">EN</button>
+    <button class="lang-btn" data-l="de">DE</button>
+    <button class="lang-btn" data-l="ru">RU</button>
+  </div>
+</div>
+
+<div class="statsbar">
+  <div class="stat s-owned"><span id="ui-owned"></span> <strong id="st-own">0</strong></div>
+  <div class="stat s-ready"><span id="ui-ready"></span> <strong id="st-rdy">0</strong> <span id="ui-cocktails"></span></div>
+  <div class="stat s-close"><span id="ui-away"></span> <strong id="st-cls">0</strong> <span id="ui-cocktails2"></span></div>
+  <div class="filter-group">
+    <button class="fbtn active" data-f="all" id="fb-all"></button>
+    <button class="fbtn" data-f="ready" id="fb-ready"></button>
+    <button class="fbtn" data-f="close" id="fb-close"></button>
+    <button class="fbtn" data-f="na" id="fb-na"></button>
+  </div>
+</div>
+
+
+<div class="ing-bar" id="ing-bar">
+  <span class="ing-bar-label" id="ing-bar-label"></span>
+  <div class="ing-chips" id="ing-chips"></div>
+  <select class="ing-sel" id="ing-sel"></select>
+  <button class="ing-clear" id="ing-clear"></button>
+</div>
+
+<div class="buy-panel">
+  <button class="buy-toggle" id="buy-toggle">
+    <span>&#x1F6D2;</span>
+    <span id="buy-toggle-txt"></span>
+    <span id="buy-arrow" style="transition:transform .2s">&#x25BA;</span>
+  </button>
+  <div class="buy-content" id="buy-content">
+    <div class="buy-cards" id="buy-cards"></div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table id="tbl"></table>
+</div>
+
+<script>
+// ══════════ TRANSLATIONS ══════════
+const UI={
+  en:{
+    title:'&#x1F378; Cocktail Pivot Table',
+    sub:'Tick what you have \u00b7 See what you can make \u00b7 Discover what to buy next',
+    legHave:'Have it + needed', legMiss:'Missing + needed', legNA:'Alcohol-free',
+    owned:'Owned:', ready:'\u2713 Ready:', away:'\u2248 1 away:', cocktails:'cocktails',
+    all:'All', fReady:'\u2713 Ready', fClose:'\u2248 1\u20132 away', fNA:'Non-alcoholic',
+    btnAll:'\u2713 All', btnNone:'\u2715 None',
+    buyShow:'SHOW: WHAT TO BUY NEXT', buyHide:'HIDE: WHAT TO BUY NEXT',
+    ingredient:'INGREDIENT',
+    subRow:'\u2190 Tick boxes to mark what you have',
+    fbReady:'\u2713 READY', fb1:'1 AWAY', fbN:'AWAY', fbMiss:'MISS',
+    unlocks:'Unlocks', unlocksSfx:'cocktail(s)', closerPfx:'Brings', closerSfx:'closer',
+    buyEmpty:'Tick some ingredients you already have, then see what to buy next.',
+    buyAll:'\uD83C\uDF89 You can already make everything!',
+    ifbLabel:'SHOW COCKTAILS WITH:', ifbAdd:'+ Add ingredient…', ifbHint:'All cocktails shown · select an ingredient to filter', ifbClear:'\u2715 CLEAR',
+  },
+  de:{
+    title:'&#x1F378; Cocktail Pivot-Tabelle',
+    sub:'Ankreuzen was du hast \u00b7 Sehen was du machen kannst \u00b7 Herausfinden was du kaufen solltest',
+    legHave:'Vorhanden + ben\u00f6tigt', legMiss:'Fehlt + ben\u00f6tigt', legNA:'Alkoholfrei',
+    owned:'Vorhanden:', ready:'\u2713 Fertig:', away:'\u2248 1 fehlt:', cocktails:'Cocktails',
+    all:'Alle', fReady:'\u2713 Fertig', fClose:'\u2248 1\u20132 fehlen', fNA:'Alkoholfrei',
+    btnAll:'\u2713 Alle', btnNone:'\u2715 Keine',
+    buyShow:'ZEIGEN: WAS KAUFEN?', buyHide:'VERBERGEN: WAS KAUFEN?',
+    ingredient:'ZUTAT',
+    subRow:'\u2190 Ankreuzen was vorhanden ist',
+    fbReady:'\u2713 FERTIG', fb1:'1 FEHLT', fbN:'FEHLEN', fbMiss:'FEHLEN',
+    unlocks:'Schaltet', unlocksSfx:'frei', closerPfx:'Bringt', closerSfx:'n\u00e4her',
+    buyEmpty:'Kreuze zuerst Zutaten an, die du schon hast.',
+    buyAll:'\uD83C\uDF89 Du kannst schon alles machen!',
+    ifbLabel:'NUR COCKTAILS MIT:', ifbAdd:'+ Zutat hinzufügen…', ifbHint:'Alle Cocktails · Zutat wählen zum Filtern', ifbClear:'\u2715 LEEREN',
+  },
+  ru:{
+    title:'&#x1F378; \u0422\u0430\u0431\u043b\u0438\u0446\u0430 \u041a\u043e\u043a\u0442\u0435\u0439\u043b\u0435\u0439',
+    sub:'\u041e\u0442\u043c\u0435\u0442\u044c \u0447\u0442\u043e \u0435\u0441\u0442\u044c \u00b7 \u0421\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0447\u0442\u043e \u043c\u043e\u0436\u043d\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c \u00b7 \u0423\u0437\u043d\u0430\u0442\u044c \u0447\u0442\u043e \u043a\u0443\u043f\u0438\u0442\u044c',
+    legHave:'\u0415\u0441\u0442\u044c + \u043d\u0443\u0436\u0435\u043d', legMiss:'\u041d\u0435\u0442 + \u043d\u0443\u0436\u0435\u043d', legNA:'\u0411\u0435\u0437\u0430\u043b\u043a\u043e\u0433\u043e\u043b\u044c\u043d\u044b\u0435',
+    owned:'\u0415\u0441\u0442\u044c:', ready:'\u2713 \u0413\u043e\u0442\u043e\u0432\u043e:', away:'\u2248 1 \u043d\u0435\u0442:', cocktails:'\u043a\u043e\u043a\u0442\u0435\u0439\u043b\u0435\u0439',
+    all:'\u0412\u0441\u0435', fReady:'\u2713 \u0413\u043e\u0442\u043e\u0432\u043e', fClose:'\u2248 1\u20132 \u043d\u0435\u0442', fNA:'\u0411\u0435\u0437\u0430\u043b\u043a.',
+    btnAll:'\u2713 \u0412\u0441\u0435', btnNone:'\u2715 \u041d\u0435\u0442',
+    buyShow:'\u041f\u041e\u041a\u0410\u0417\u0410\u0422\u042c: \u0427\u0422\u041e \u041a\u0423\u041f\u0418\u0422\u042c?', buyHide:'\u0421\u041a\u0420\u042b\u0422\u042c: \u0427\u0422\u041e \u041a\u0423\u041f\u0418\u0422\u042c?',
+    ingredient:'\u0418\u041d\u0413\u0420\u0415\u0414\u0418\u0415\u041d\u0422',
+    subRow:'\u2190 \u041e\u0442\u043c\u0435\u0442\u044c \u0447\u0442\u043e \u0443\u0436\u0435 \u0435\u0441\u0442\u044c',
+    fbReady:'\u2713 \u0413\u041e\u0422\u041e\u0412\u041e', fb1:'1 \u041d\u0415\u0422', fbN:'\u041d\u0415\u0422', fbMiss:'\u041d\u0415\u0422',
+    unlocks:'\u041e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442', unlocksSfx:'\u043a\u043e\u043a\u0442\u0435\u0439\u043b\u0435\u0439', closerPfx:'\u041f\u0440\u0438\u0431\u043b\u0438\u0436\u0430\u0435\u0442', closerSfx:'\u043a \u0446\u0435\u043b\u0438',
+    buyEmpty:'\u041e\u0442\u043c\u0435\u0442\u044c \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442\u044b \u043a\u043e\u0442\u043e\u0440\u044b\u0435 \u0443\u0436\u0435 \u0435\u0441\u0442\u044c.',
+    buyAll:'\uD83C\uDF89 \u0422\u044b \u0443\u0436\u0435 \u043c\u043e\u0436\u0435\u0448\u044c \u0441\u0434\u0435\u043b\u0430\u0442\u044c \u0432\u0441\u0451!',
+    ifbLabel:'\u041f\u041e\u041a\u0410\u0417\u0410\u0422\u042c \u0421 :', ifbAdd:'+ \u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442…', ifbHint:'\u0412\u0441\u0435 \u043a\u043e\u043a\u0442\u0435\u0439\u043b· \u0432\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0438\u043d\u0433\u0440\u0435\u0434\u0438\u0435\u043d\u0442', ifbClear:'\u2715 \u0421\u0411\u0420\u041e\u0421',
+  }
+};
+
+// Amount translation map (from DE base)
+const AMT={
+  en:{'auffüll.':'top up','Schuss':'splash','8 Bl.':'8 lv.','5 Bl.':'5 lv.','8\u201310 Bl.':'8\u201310 lv.','4 Sch.':'4 sl.','1\u20132 Stk':'1\u20132 pcs','1 Stk':'1 pc','\u00bd Stk':'\u00bd pc','2 TL':'2 tsp','2\u00d7':'2 dashes','1\u00d7':'1\u00d7'},
+  de:{'auffüll.':'auffüll.','Schuss':'Schuss','8 Bl.':'8 Bl.','5 Bl.':'5 Bl.','8\u201310 Bl.':'8\u201310 Bl.','4 Sch.':'4 Sch.','1\u20132 Stk':'1\u20132 Stk','1 Stk':'1 Stk','\u00bd Stk':'\u00bd Stk','2 TL':'2 TL','2\u00d7':'2\u00d7','1\u00d7':'1\u00d7'},
+  ru:{'auffüll.':'\u0434\u043e\u043b\u0438\u0442\u044c','Schuss':'\u043d\u0435\u043c\u043d\u043e\u0433\u043e','8 Bl.':'8 \u043b.','5 Bl.':'5 \u043b.','8\u201310 Bl.':'8\u201310 \u043b.','4 Sch.':'4 \u0434\u043e\u043b.','1\u20132 Stk':'1\u20132 \u0448\u0442','\u00bd Stk':'\u00bd \u0448\u0442','1 Stk':'1 \u0448\u0442','2 TL':'2 \u0447.\u043b.','2\u00d7':'2 \u0434\u0430\u0448','1\u00d7':'1\u00d7'},
+};
+function ta(v){return(AMT[lang]&&AMT[lang][v])||v;}
+
+// ══════════ CATEGORIES ══════════
+const CATS=[
+  {id:'spirits', label:{en:'\uD83E\uDD43 Spirits',de:'\uD83E\uDD43 Spirituosen',ru:'\uD83E\uDD43 \u041a\u0440\u0435\u043f\u043a\u0438\u0435'}, color:'#c9a84c'},
+  {id:'liqueurs',label:{en:'\uD83C\uDF4A Liqueurs',de:'\uD83C\uDF4A Lik\u00f6re',ru:'\uD83C\uDF4A \u041b\u0438\u043a\u0451\u0440\u044b'}, color:'#e07840'},
+  {id:'juices',  label:{en:'\uD83C\uDF4B Juices',de:'\uD83C\uDF4B S\u00e4fte',ru:'\uD83C\uDF4B \u0421\u043e\u043a\u0438'}, color:'#8ab840'},
+  {id:'syrups',  label:{en:'\uD83C\uDF6C Syrups',de:'\uD83C\uDF6C Sirupe',ru:'\uD83C\uDF6C \u0421\u0438\u0440\u043e\u043f\u044b'}, color:'#c880d0'},
+  {id:'fresh',   label:{en:'\uD83C\uDF3F Fresh',de:'\uD83C\uDF3F Frisches',ru:'\uD83C\uDF3F \u0421\u0432\u0435\u0436\u0435\u0435'}, color:'#50b870'},
+  {id:'mixers',  label:{en:'\uD83E\uDEA7 Mixers',de:'\uD83E\uDEA7 Mixer',ru:'\uD83E\uDEA7 \u041c\u0438\u043a\u0441\u0435\u0440\u044b'}, color:'#50a0d0'},
+  {id:'bitters', label:{en:'\uD83C\uDF36\uFE0F Bitters',de:'\uD83C\uDF36\uFE0F Bitter',ru:'\uD83C\uDF36\uFE0F \u0411\u0438\u0442\u0442\u0435\u0440\u0441'}, color:'#c07050'},
+];
+
+// ══════════ INGREDIENTS ══════════
+const INGS=[
+  {id:'rum',         name:{en:'White Rum (Havana Club)',    de:'Wei\u00dfer Rum (Havana Club)',    ru:'\u0411\u0435\u043b\u044b\u0439 \u0440\u043e\u043c (Havana Club)'},cat:'spirits'},
+  {id:'tequila',     name:{en:'Tequila (100% Agave)',       de:'Tequila (100% Agave)',             ru:'\u0422\u0435\u043a\u0438\u043b\u0430 (100% Agave)'},cat:'spirits'},
+  {id:'gin',         name:{en:'Gin (e.g. Monkey 47)',       de:'Gin (z.B. Monkey 47)',             ru:'\u0414\u0436\u0438\u043d (Monkey 47)'},cat:'spirits'},
+  {id:'vodka',       name:{en:'Vodka',                      de:'Vodka',                            ru:'\u0412\u043e\u0434\u043a\u0430'},cat:'spirits'},
+  {id:'bourbon',     name:{en:'Bourbon Whiskey',            de:'Bourbon Whiskey',                  ru:'\u0411\u0443\u0440\u0431\u043e\u043d \u0432\u0438\u0441\u043a\u0438'},cat:'spirits'},
+  {id:'cachaca',     name:{en:'Cacha\u00e7a',               de:'Cacha\u00e7a',                     ru:'\u041a\u0430\u0448\u0430\u0441\u0430'},cat:'spirits'},
+  {id:'cointreau',   name:{en:'Cointreau / Triple Sec',     de:'Cointreau / Triple Sec',           ru:'\u041a\u0443\u0430\u043d\u0442\u0440\u043e / Triple Sec'},cat:'liqueurs'},
+  {id:'kahlua',      name:{en:'Kahl\u00faa',                de:'Kahl\u00faa',                      ru:'\u041a\u0430\u043b\u0443\u0430'},cat:'liqueurs'},
+  {id:'aperol',      name:{en:'Aperol',                     de:'Aperol',                           ru:'\u0410\u043f\u0435\u0440\u043e\u043b\u044c'},cat:'liqueurs'},
+  {id:'campari',     name:{en:'Campari',                    de:'Campari',                          ru:'\u041a\u0430\u043c\u043f\u0430\u0440\u0438'},cat:'liqueurs'},
+  {id:'vermouth',    name:{en:'Sweet Vermouth',             de:'S\u00fc\u00dfer Wermut',           ru:'\u0421\u043b\u0430\u0434\u043a\u0438\u0439 \u0432\u0435\u0440\u043c\u0443\u0442'},cat:'liqueurs'},
+  {id:'dry_v',       name:{en:'Dry Vermouth',               de:'Trockener Wermut',                 ru:'\u0421\u0443\u0445\u043e\u0439 \u0432\u0435\u0440\u043c\u0443\u0442'},cat:'liqueurs'},
+  {id:'peach_s',     name:{en:'Peach Schnapps',             de:'Pfirsichlik\u00f6r',               ru:'\u041f\u0435\u0440\u0441\u0438\u043a\u043e\u0432\u044b\u0439 \u043b\u0438\u043a\u0451\u0440'},cat:'liqueurs'},
+  {id:'passoa',      name:{en:'Passoa (Passion Fruit)',     de:'Passoa (Marakuja)',                ru:'Passoa (\u043c\u0430\u0440\u0430\u043a\u0443\u0439\u044f)'},cat:'liqueurs'},
+  {id:'lime',        name:{en:'Lime / Lime Juice',          de:'Limette / Limettensaft',           ru:'\u041b\u0430\u0439\u043c / \u0441\u043e\u043a \u043b\u0430\u0439\u043c\u0430'},cat:'juices'},
+  {id:'lemon',       name:{en:'Lemon / Lemon Juice',        de:'Zitrone / Zitronensaft',           ru:'\u041b\u0438\u043c\u043e\u043d / \u0441\u043e\u043a \u043b\u0438\u043c\u043e\u043d\u0430'},cat:'juices'},
+  {id:'cranberry',   name:{en:'Cranberry Juice',            de:'Cranberrysaft',                    ru:'\u041a\u043b\u044e\u043a\u0432\u0435\u043d\u043d\u044b\u0439 \u0441\u043e\u043a'},cat:'juices'},
+  {id:'espresso',    name:{en:'Espresso (cold)',            de:'Espresso (kalt)',                  ru:'\u042d\u0441\u043f\u0440\u0435\u0441\u0441\u043e (\u0445\u043e\u043b\u043e\u0434\u043d\u043e\u0435)'},cat:'juices'},
+  {id:'oj',          name:{en:'Orange Juice (fresh)',       de:'Orangensaft (frisch)',              ru:'\u0410\u043f\u0435\u043b\u044c\u0441\u0438\u043d\u043e\u0432\u044b\u0439 \u0441\u043e\u043a'},cat:'juices'},
+  {id:'pineapple_j', name:{en:'Pineapple Juice',           de:'Ananassaft',                       ru:'\u0410\u043d\u0430\u043d\u0430\u0441\u043e\u0432\u044b\u0439 \u0441\u043e\u043a'},cat:'juices'},
+  {id:'grapefruit_j',name:{en:'Grapefruit Juice',          de:'Grapefruitsaft',                   ru:'\u0413\u0440\u0435\u0439\u043f\u0444\u0440\u0443\u0442\u043e\u0432\u044b\u0439 \u0441\u043e\u043a'},cat:'juices'},
+  {id:'passion_p',   name:{en:'Passion Fruit Puree',       de:'Passionsfruchtpüree',              ru:'\u041f\u044e\u0440\u0435 \u043c\u0430\u0440\u0430\u043a\u0443\u0439\u0438'},cat:'juices'},
+  {id:'sugar',       name:{en:'Sugar Syrup',               de:'Zuckersirup',                      ru:'\u0421\u0430\u0445\u0430\u0440\u043d\u044b\u0439 \u0441\u0438\u0440\u043e\u043f'},cat:'syrups'},
+  {id:'elder',       name:{en:'Elderflower Syrup',         de:'Holunderblütensirup',              ru:'\u0421\u0438\u0440\u043e\u043f \u0431\u0443\u0437\u0438\u043d\u044b'},cat:'syrups'},
+  {id:'grenadine',   name:{en:'Grenadine',                 de:'Grenadine',                        ru:'\u0413\u0440\u0435\u043d\u0430\u0434\u0438\u043d'},cat:'syrups'},
+  {id:'raspberry_s', name:{en:'Raspberry Syrup',           de:'Himbeersirup',                     ru:'\u041c\u0430\u043b\u0438\u043d\u043e\u0432\u044b\u0439 \u0441\u0438\u0440\u043e\u043f'},cat:'syrups'},
+  {id:'mint',        name:{en:'Mint (fresh)',               de:'Minze (frisch)',                   ru:'\u041c\u044f\u0442\u0430 (\u0441\u0432\u0435\u0436\u0430\u044f)'},cat:'fresh'},
+  {id:'basil',       name:{en:'Basil (fresh)',              de:'Basilikum (frisch)',               ru:'\u0411\u0430\u0437\u0438\u043b\u0438\u043a (\u0441\u0432\u0435\u0436\u0438\u0439)'},cat:'fresh'},
+  {id:'eggwhite',    name:{en:'Egg White',                  de:'Eiweiß',                           ru:'\u042f\u0438\u0447\u043d\u044b\u0439 \u0431\u0435\u043b\u043e\u043a'},cat:'fresh'},
+  {id:'orange',      name:{en:'Orange',                     de:'Orange',                           ru:'\u0410\u043f\u0435\u043b\u044c\u0441\u0438\u043d'},cat:'fresh'},
+  {id:'cucumber',    name:{en:'Cucumber',                   de:'Gurke',                            ru:'\u041e\u0433\u0443\u0440\u0435\u0446'},cat:'fresh'},
+  {id:'prosecco',    name:{en:'Prosecco / Sparkling Wine',  de:'Prosecco / Sekt',                  ru:'\u041f\u0440\u043e\u0441\u0435\u043a\u043a\u043e / \u0438\u0433\u0440\u0438\u0441\u0442\u043e\u0435'},cat:'mixers'},
+  {id:'soda',        name:{en:'Soda Water',                 de:'Sodawasser',                       ru:'\u0421\u043e\u0434\u043e\u0432\u0430\u044f \u0432\u043e\u0434\u0430'},cat:'mixers'},
+  {id:'tonic',       name:{en:'Tonic Water (Thomas Henry)', de:'Tonic Water (Thomas Henry)',       ru:'\u0422\u043e\u043d\u0438\u043a (Thomas Henry)'},cat:'mixers'},
+  {id:'ginger_beer', name:{en:'Ginger Beer',                de:'Ginger Beer',                      ru:'\u0418\u043c\u0431\u0438\u0440\u043d\u044b\u0439 \u044d\u043b\u044c'},cat:'mixers'},
+  {id:'coconut_c',   name:{en:'Coconut Cream',              de:'Kokoscreme (Dose)',                ru:'\u041a\u043e\u043a\u043e\u0441\u043e\u0432\u044b\u0435 \u0441\u043b\u0438\u0432\u043a\u0438'},cat:'mixers'},
+  {id:'ginger_ale',  name:{en:'Ginger Ale',                 de:'Ginger Ale',                       ru:'\u0414\u0436\u0438\u043d\u0434\u0436\u0435\u0440 \u044d\u043b\u044c (Gas)'},cat:'mixers'},
+    {id:'cola',       name:{en:'Cola (Coca-Cola)',      de:'Cola (Coca-Cola)',         ru:'Кола (Coca-Cola)'},cat:'mixers'},
+  {id:'angostura',   name:{en:'Angostura Bitters',          de:'Angostura Bitter',                 ru:'\u0411\u0438\u0442\u0442\u0435\u0440\u0441 Angostura'},cat:'bitters'},
+];
+
+// ══════════ COCKTAILS ══════════
+const COCKTAILS=[
+  {id:'daiquiri',   name:{en:'Daiquiri',         de:'Daiquiri',         ru:'\u0414\u0430\u0439\u043a\u0438\u0440\u0438'},        method:'&#x1F378;',type:'alc'},
+  {id:'margarita',  name:{en:'Margarita',        de:'Margarita',        ru:'\u041c\u0430\u0440\u0433\u0430\u0440\u0438\u0442\u0430'},method:'&#x1F378;',type:'alc'},
+  {id:'esp_m',      name:{en:'Espresso\nMartini',de:'Espresso\nMartini',ru:'\u042d\u0441\u043f\u0440\u0435\u0441\u0441\u043e\n\u041c\u0430\u0440\u0442\u0438\u043d\u0438'},method:'&#x1F378;',type:'alc'},
+  {id:'wsky_sour',  name:{en:'Whisky\nSour',     de:'Whisky\nSour',     ru:'\u0412\u0438\u0441\u043a\u0438\n\u0421\u0430\u0443\u044d\u0440'},method:'&#x1F378;',type:'alc'},
+  {id:'cosmo',      name:{en:'Cosmo-\npolitan',  de:'Cosmo-\npolitan',  ru:'\u041a\u043e\u0441\u043c\u043e-\n\u043f\u043e\u043b\u0438\u0442\u0435\u043d'},method:'&#x1F378;',type:'alc'},
+  {id:'gin_smash',  name:{en:'Gin Basil\nSmash', de:'Gin Basil\nSmash', ru:'\u0414\u0436\u0438\u043d \u0411\u0430\u0437\u0438\u043b\n\u0421\u043c\u044d\u0448'},method:'&#x1F378;',type:'alc'},
+  {id:'pina_colada',name:{en:'Pi\u00f1a\nColada', de:'Pi\u00f1a\nColada',ru:'\u041f\u0438\u043d\u044f\n\u041a\u043e\u043b\u0430\u0434\u0430'},method:'&#x1F378;',type:'alc'},
+  {id:'pornstar',   name:{en:'Pornstar\nMartini',de:'Pornstar\nMartini',ru:'\u041f\u043e\u0440\u043d\u0441\u0442\u0430\u0440\n\u041c\u0430\u0440\u0442\u0438\u043d\u0438'},method:'&#x1F378;',type:'alc'},
+  {id:'sex_beach',  name:{en:'Sex on\nthe Beach',de:'Sex on\nthe Beach',ru:'\u0421\u0435\u043a\u0441 \u043d\u0430\n\u041f\u043b\u044f\u0436\u0435'},method:'&#x1F378;',type:'alc'},
+  {id:'clover_club',name:{en:'Clover\nClub',     de:'Clover\nClub',     ru:'\u041a\u043b\u043e\u0432\u0435\u0440\n\u041a\u043b\u0430\u0431'},method:'&#x1F378;',type:'alc'},
+  {id:'negroni',    name:{en:'Negroni',          de:'Negroni',          ru:'\u041d\u0435\u0433\u0440\u043e\u043d\u0438'},         method:'&#x1F94E;',type:'alc'},
+  {id:'old_fash',   name:{en:'Old\nFashioned',   de:'Old\nFashioned',   ru:'\u041e\u043b\u0434 \u0424\u044d\u0448\u043d\u0434'},  method:'&#x1F94E;',type:'alc'},
+  {id:'manhattan',  name:{en:'Manhattan',        de:'Manhattan',        ru:'\u041c\u0430\u043d\u0445\u044d\u0442\u0442\u0435\u043d'},method:'&#x1F94E;',type:'alc'},
+  {id:'dry_martini',name:{en:'Dry\nMartini',     de:'Dry\nMartini',     ru:'\u0421\u0443\u0445\u043e\u0439\n\u041c\u0430\u0440\u0442\u0438\u043d\u0438'},method:'&#x1F94E;',type:'alc'},
+  {id:'hugo',       name:{en:'Hugo',             de:'Hugo',             ru:'\u0425\u0443\u0433\u043e'},                           method:'&#x1F33F;',type:'alc'},
+  {id:'aperol_sp',  name:{en:'Aperol\nSpritz',   de:'Aperol\nSpritz',   ru:'\u0410\u043f\u0435\u0440\u043e\u043b\u044c\n\u0428\u043f\u0440\u0438\u0446'},method:'&#x1F33F;',type:'alc'},
+  {id:'mojito',     name:{en:'Mojito',           de:'Mojito',           ru:'\u041c\u043e\u0445\u0438\u0442\u043e'},               method:'&#x1F33F;',type:'alc'},
+  {id:'gin_tonic',  name:{en:'Gin\nTonic',       de:'Gin\nTonic',       ru:'\u0414\u0436\u0438\u043d\n\u0422\u043e\u043d\u0438\u043a'},method:'&#x1F33F;',type:'alc'},
+  {id:'moscow_mule',name:{en:'Moscow\nMule',     de:'Moscow\nMule',     ru:'\u041c\u043e\u0441\u043a\u043e\u0432\u0441\u043a\u0438\u0439\n\u041c\u0443\u043b'},method:'&#x1F33F;',type:'alc'},
+  {id:'paloma',     name:{en:'Paloma',           de:'Paloma',           ru:'\u041f\u0430\u043b\u043e\u043c\u0430'},               method:'&#x1F33F;',type:'alc'},
+  {id:'tequila_sun',name:{en:'Tequila\nSunrise', de:'Tequila\nSunrise', ru:'\u0422\u0435\u043a\u0438\u043b\u0430\n\u0421\u0430\u043d\u0440\u0430\u0439\u0441'},method:'&#x1F33F;',type:'alc'},
+  {id:'caipirinha', name:{en:'Caipirinha',       de:'Caipirinha',       ru:'\u041a\u0430\u0439\u043f\u0438\u0440\u0438\u043d\u044c\u044f'},method:'&#x1F33F;',type:'alc'},
+  {id:'americano',  name:{en:'Americano',        de:'Americano',        ru:'\u0410\u043c\u0435\u0440\u0438\u043a\u0430\u043d\u043e'},method:'&#x1F33F;',type:'alc'},
+    {id:'mimosa',    name:{en:'Mimosa',          de:'Mimosa',          ru:'Мимоза'},              method:'&#x1F33F;',type:'alc'},
+  {id:'lemon_drop',name:{en:'Lemon\nDrop',      de:'Lemon\nDrop',      ru:'Лемон\nДроп'},        method:'&#x1F378;',type:'alc'},
+  {id:'kamikaze',  name:{en:'Kamikaze',           de:'Kamikaze',          ru:'Камикадзе'},           method:'&#x1F378;',type:'alc'},
+  {id:'white_lady',name:{en:'White\nLady',       de:'White\nLady',      ru:'Уайт\nЛэди'},              method:'&#x1F378;',type:'alc'},
+  {id:'c_fizz',    name:{en:'Cointreau\nFizz',   de:'Cointreau\nFizz',  ru:'Куантро\nФизз'},method:'&#x1F33F;',type:'alc'},
+  {id:'c_basil',   name:{en:'Cointreau\nBasil',  de:'Cointreau\nBasil', ru:'Куантро\nБазил'},method:'&#x1F378;',type:'alc'},
+  {id:'vodka_tonic', name:{en:'Vodka\nTonic',      de:'Vodka\nTonic',      ru:'Водка\nТоник'},        method:'&#x1F33F;',type:'alc'},
+  {id:'tequila_ton', name:{en:'Tequila\nTonic',    de:'Tequila\nTonic',    ru:'Текила\nТоник'},      method:'&#x1F33F;',type:'alc'},
+  {id:'aperol_ton',  name:{en:'Aperol\nTonic',     de:'Aperol\nTonic',     ru:'Апероль\nТоник'},   method:'&#x1F33F;',type:'alc'},
+  {id:'campari_ton', name:{en:'Campari\nTonic',    de:'Campari\nTonic',    ru:'Кампари\nТоник'},   method:'&#x1F33F;',type:'alc'},
+  {id:'ton_cubano',  name:{en:'Tonic\nCubano',     de:'Tonic\nCubano',     ru:'Тоник\nКубано'},       method:'&#x1F33F;',type:'alc'},
+  {id:'elder_tonic', name:{en:'Elderflower\nTonic',de:'Holunder\nTonic',   ru:'Бузина\nТоник'},       method:'&#x1F9C3;',type:'na'},
+  {id:'cuba_libre',   name:{en:'Cuba\nLibre',          de:'Cuba\nLibre',          ru:'Куба\nЛибре'},     method:'&#x1F33F;',type:'alc'},
+  {id:'dark_stormy',  name:{en:'Dark \'n\'\nStormy',    de:'Dark \'n\'\nStormy',    ru:'Тёмный\nШторм'},  method:'&#x1F33F;',type:'alc'},
+  {id:'rum_punch',    name:{en:'Rum\nPunch',           de:'Rum\nPunch',           ru:'Ромовый\nПунш'},   method:'&#x1F33F;',type:'alc'},
+  {id:'rasp_daiquiri',name:{en:'Raspberry\nDaiquiri', de:'Himbeer\nDaiquiri',    ru:'Малиновый\nДайкири'},method:'&#x1F378;',type:'alc'},
+  {id:'rum_sour',     name:{en:'Rum\nSour',            de:'Rum\nSour',            ru:'Ромовый\nСауэр'},   method:'&#x1F378;',type:'alc'},
+  {id:'hemingway',    name:{en:'Hemingway\nDaiquiri',  de:'Hemingway\nDaiquiri',  ru:'Хемингуэй\nДайкири'},method:'&#x1F378;',type:'alc'},
+  {id:'v_mojito',   name:{en:'Virgin\nMojito',   de:'Virgin\nMojito',   ru:'\u0411\u0435\u0437\u0430\u043b\u043a.\n\u041c\u043e\u0445\u0438\u0442\u043e'},method:'&#x1F9C3;',type:'na'},
+  {id:'shirley',    name:{en:'Shirley\nTemple',  de:'Shirley\nTemple',  ru:'\u0428\u0438\u0440\u043b\u0438\n\u0422\u0435\u043c\u043f\u043b'},method:'&#x1F9C3;',type:'na'},
+  {id:'v_pina',     name:{en:'Virgin\nPi\u00f1a',de:'Virgin\nPi\u00f1a',ru:'\u0411\u0435\u0437\u0430\u043b\u043a.\n\u041f\u0438\u043d\u044f'},method:'&#x1F9C3;',type:'na'},
+  {id:'cucumber_c', name:{en:'Cucumber\nCooler', de:'Cucumber\nCooler', ru:'\u041e\u0433\u0443\u0440\u0435\u0447\u043d\u044b\u0439\n\u041a\u0443\u043b\u0435\u0440'},method:'&#x1F9C3;',type:'na'},
+];
+
+const RECIPES={
+  daiquiri:   {rum:'60ml',       lime:'25ml',       sugar:'15ml'},
+  margarita:  {tequila:'50ml',   cointreau:'25ml',  lime:'25ml'},
+  esp_m:      {vodka:'50ml',     kahlua:'25ml',     espresso:'30ml',    sugar:'10ml'},
+  wsky_sour:  {bourbon:'50ml',   lemon:'25ml',      sugar:'20ml',       eggwhite:'1\u00d7'},
+  cosmo:      {vodka:'40ml',     cointreau:'15ml',  lime:'15ml',        cranberry:'30ml'},
+  gin_smash:  {gin:'60ml',       lemon:'25ml',      sugar:'20ml',       basil:'8 Bl.'},
+  pina_colada:{rum:'50ml',       pineapple_j:'90ml',coconut_c:'60ml'},
+  pornstar:   {vodka:'40ml',     passoa:'20ml',     passion_p:'30ml',   lime:'15ml', sugar:'10ml',prosecco:'30ml'},
+  sex_beach:  {vodka:'40ml',     peach_s:'20ml',    oj:'40ml',          cranberry:'40ml'},
+  clover_club:{gin:'50ml',       lemon:'25ml',      sugar:'15ml',       eggwhite:'1\u00d7',raspberry_s:'15ml'},
+  negroni:    {gin:'30ml',       campari:'30ml',    vermouth:'30ml'},
+  old_fash:   {bourbon:'60ml',   sugar:'10ml',      angostura:'2\u00d7'},
+  manhattan:  {bourbon:'60ml',   vermouth:'30ml',   angostura:'2\u00d7'},
+  dry_martini:{gin:'60ml',       dry_v:'15ml'},
+  hugo:       {elder:'20ml',     prosecco:'100ml',  soda:'Schuss',      mint:'5 Bl.', lime:'1\u20132 Stk'},
+  aperol_sp:  {aperol:'60ml',    prosecco:'90ml',   soda:'Schuss',      orange:'1 Stk'},
+  mojito:     {rum:'50ml',       lime:'25ml',       sugar:'15ml',       mint:'8\u201310', soda:'auffüll.'},
+  gin_tonic:  {gin:'50ml',       tonic:'150ml'},
+  moscow_mule:{vodka:'50ml',     lime:'20ml',       ginger_beer:'150ml'},
+  paloma:     {tequila:'50ml',   grapefruit_j:'100ml',lime:'15ml',      soda:'50ml'},
+  tequila_sun:{tequila:'50ml',   oj:'100ml',        grenadine:'15ml'},
+  caipirinha: {cachaca:'60ml',   lime:'\u00bd Stk', sugar:'2 TL'},
+  americano:  {campari:'30ml',   vermouth:'30ml',   soda:'auffüll.'},
+  mimosa:     {prosecco:'90ml',   oj:'60ml',     cointreau:'15ml'},
+  lemon_drop: {vodka:'45ml',     cointreau:'25ml',lemon:'20ml',    sugar:'15ml'},
+  kamikaze:   {vodka:'40ml',     cointreau:'20ml',lime:'20ml'},
+  white_lady: {gin:'40ml',       cointreau:'25ml',lemon:'25ml'},
+  c_fizz:     {cointreau:'50ml', soda:'120ml',  lime:'15ml'},
+  c_basil:    {cointreau:'40ml', lemon:'10ml',  basil:'5 Bl.',   tonic:'100ml'},
+    vodka_tonic: {vodka:'45ml',    tonic:'150ml',  lime:'15ml'},
+  tequila_ton: {tequila:'45ml',  tonic:'150ml',  lime:'15ml'},
+  aperol_ton:  {aperol:'45ml',   tonic:'120ml',  orange:'1 Stk'},
+  campari_ton: {campari:'45ml',  tonic:'120ml',  orange:'1 Stk'},
+  ton_cubano:  {rum:'45ml',      lime:'½ Stk', mint:'3–4 Bl.', tonic:'120ml'},
+  elder_tonic: {elder:'20ml',    tonic:'150ml',  lime:'15ml'},
+    cuba_libre:   {rum:'50ml',      cola:'120ml',      lime:'10ml'},
+  dark_stormy:  {rum:'60ml',      ginger_beer:'150ml', lime:'15ml'},
+  rum_punch:    {rum:'60ml',      oj:'60ml',         pineapple_j:'60ml',   grenadine:'20ml', lime:'15ml'},
+  rasp_daiquiri:{rum:'50ml',      lime:'20ml',       raspberry_s:'25ml'},
+  rum_sour:     {rum:'60ml',      lemon:'25ml',      sugar:'20ml'},
+  hemingway:    {rum:'60ml',      lime:'20ml',       grapefruit_j:'20ml',  sugar:'15ml'},
+    v_mojito:   {lime:'25ml',      mint:'8\u201310 Bl.',sugar:'15ml',     soda:'auffüll.'},
+  shirley:    {ginger_ale:'150ml',grenadine:'20ml', oj:'30ml'},
+  v_pina:     {pineapple_j:'120ml',coconut_c:'60ml'},
+  cucumber_c: {cucumber:'4 Sch.',mint:'5 Bl.',      lime:'20ml',        sugar:'15ml', soda:'auffüll.'},
+};
+
+// ══════════ STATE ══════════
+let owned=new Set(), lang='en', activeFilter='all', buyOpen=false, mustInclude=new Set();
+
+// ══════════ LANG UI ══════════
+function applyLangUI(){
+  const t=UI[lang];
+  document.getElementById('ui-title').innerHTML=t.title;
+  document.getElementById('ui-sub').textContent=t.sub;
+  document.getElementById('ui-leg-have').textContent=t.legHave;
+  document.getElementById('ui-leg-miss').textContent=t.legMiss;
+  document.getElementById('ui-leg-na').textContent='\u00a0'+t.legNA;
+  document.getElementById('ui-owned').textContent=t.owned;
+  document.getElementById('ui-ready').textContent=t.ready;
+  document.getElementById('ui-away').textContent=t.away;
+  document.getElementById('ui-cocktails').textContent=t.cocktails;
+  document.getElementById('ui-cocktails2').textContent=t.cocktails;
+  document.getElementById('fb-all').textContent=t.all;
+  document.getElementById('fb-ready').textContent=t.fReady;
+  document.getElementById('fb-close').textContent=t.fClose;
+  document.getElementById('fb-na').textContent=t.fNA;
+  const btn=document.getElementById('buy-toggle-txt');
+  if(btn) btn.textContent=buyOpen?t.buyHide:t.buyShow;
+}
+
+// ══════════ BUILD TABLE ══════════
+function buildTable(){
+  const tbl=document.getElementById('tbl');
+  tbl.innerHTML='';
+  const t=UI[lang];
+  const thead=document.createElement('thead');
+
+  // Row 1
+  const trH=document.createElement('tr');
+  const thI=document.createElement('th');
+  thI.className='col-ing';
+  thI.style.borderBottom='2px solid var(--gold)';
+  thI.innerHTML='<div class="th-ing-wrap"><span class="th-ing-label">'+t.ingredient+'</span><div class="ctrl-row"><button class="mini-btn" id="btn-all">'+t.btnAll+'</button><button class="mini-btn" id="btn-none">'+t.btnNone+'</button></div></div>';
+  trH.appendChild(thI);
+
+  COCKTAILS.forEach(c=>{
+    const th=document.createElement('th');
+    th.className='col-c'; th.dataset.cid=c.id; th.title=c.name[lang].replace('\n',' ');
+    th.style.borderBottom='2px solid '+(c.type==='na'?'var(--blue)':'var(--gold)');
+    th.innerHTML='<div class="th-c-wrap'+(c.type==='na'?' na':'')+'"><span class="th-method">'+c.method+'</span><span class="th-cname">'+c.name[lang]+'</span><span class="fb" id="fb-'+c.id+'">—</span><div class="fbar"><div class="ffill" id="ff-'+c.id+'" style="width:0%"></div></div></div>';
+    trH.appendChild(th);
+  });
+  thead.appendChild(trH);
+
+  // Row 2 sub-header
+  const trS=document.createElement('tr');
+  const thS=document.createElement('th');
+  thS.className='col-ing th-sum-ing'; thS.textContent=t.subRow; trS.appendChild(thS);
+  COCKTAILS.forEach(c=>{
+    const th=document.createElement('th');
+    th.className='col-c th-sum-c'; th.dataset.cid=c.id;
+    th.innerHTML='<span id="sum-'+c.id+'"></span>'; trS.appendChild(th);
+  });
+  thead.appendChild(trS);
+  tbl.appendChild(thead);
+
+  // TBODY
+  const tbody=document.createElement('tbody');
+  CATS.forEach(cat=>{
+    const ings=INGS.filter(i=>i.cat===cat.id);
+    if(!ings.length) return;
+    // cat row
+    const trC=document.createElement('tr'); trC.className='row-cat';
+    const tdC=document.createElement('td'); tdC.className='col-ing';
+    tdC.colSpan=1; tdC.style.color=cat.color; tdC.style.borderLeft='3px solid '+cat.color;
+    tdC.textContent=cat.label[lang]; trC.appendChild(tdC);
+    COCKTAILS.forEach(()=>{
+      const td=document.createElement('td');
+      td.style.background='var(--bg3)'; td.style.borderBottom='1px solid rgba(255,255,255,.04)';
+      trC.appendChild(td);
+    });
+    tbody.appendChild(trC);
+
+    ings.forEach(ing=>{
+      const tr=document.createElement('tr'); tr.dataset.iid=ing.id;
+      const tdI=document.createElement('td'); tdI.className='col-ing';
+      tdI.innerHTML='<div class="ing-cell"><input type="checkbox" class="ing-cb" id="cb-'+ing.id+'" data-iid="'+ing.id+'" '+(owned.has(ing.id)?'checked':'')+'><label class="ing-lbl'+(owned.has(ing.id)?' owned':'')+'" for="cb-'+ing.id+'">'+ing.name[lang]+'</label></div>';
+      tr.appendChild(tdI);
+
+      COCKTAILS.forEach(c=>{
+        const td=document.createElement('td');
+        td.className='col-c data-cell'; td.dataset.iid=ing.id; td.dataset.cid=c.id;
+        if(c.type==='na') td.dataset.na='1';
+        const recipe=RECIPES[c.id]||{};
+        const amt=recipe[ing.id];
+        if(amt){
+          td.textContent=ta(amt);
+          const na=c.type==='na'?' na-col':'';
+          td.className+=(owned.has(ing.id)?' used-have'+na:' used-miss'+na);
+        } else { td.className+=' unused'; }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+  });
+  tbl.appendChild(tbody);
+
+  // Events
+  document.getElementById('btn-all').onclick=()=>{INGS.forEach(i=>owned.add(i.id));refresh();};
+  document.getElementById('btn-none').onclick=()=>{owned.clear();refresh();};
+  document.querySelectorAll('.ing-cb').forEach(cb=>{
+    cb.addEventListener('change',e=>{
+      const iid=e.target.dataset.iid;
+      if(e.target.checked) owned.add(iid); else owned.delete(iid);
+      refresh();
+    });
+  });
+  refresh();
+}
+
+// ══════════ REFRESH ══════════
+function refresh(){
+  const t=UI[lang];
+  document.querySelectorAll('.ing-cb').forEach(cb=>{
+    const iid=cb.dataset.iid; cb.checked=owned.has(iid);
+    const lbl=cb.nextElementSibling;
+    if(lbl) lbl.className='ing-lbl'+(owned.has(iid)?' owned':'');
+  });
+  document.querySelectorAll('.data-cell').forEach(td=>{
+    const iid=td.dataset.iid,cid=td.dataset.cid;
+    const recipe=RECIPES[cid]||{};
+    const amt=recipe[iid];
+    if(!amt) return;
+    const c=COCKTAILS.find(x=>x.id===cid);
+    const na=c&&c.type==='na'?' na-col':'';
+    td.className='col-c data-cell'+(owned.has(iid)?' used-have'+na:' used-miss'+na);
+    td.textContent=ta(amt);
+  });
+
+  let rdy=0,cls=0;
+  COCKTAILS.forEach(c=>{
+    const recipe=RECIPES[c.id]||{};
+    const needed=Object.keys(recipe);
+    const have=needed.filter(i=>owned.has(i)).length;
+    const miss=needed.length-have;
+    const pct=needed.length>0?Math.round(have/needed.length*100):0;
+    const fb=document.getElementById('fb-'+c.id);
+    const ff=document.getElementById('ff-'+c.id);
+    const sm=document.getElementById('sum-'+c.id);
+    ff.style.width=pct+'%';
+    if(miss===0){fb.textContent=t.fbReady;fb.className='fb fb-ready';ff.style.background='var(--green)';if(cocktailPassesIngFilter(c.id))rdy++;}
+    else if(miss===1){fb.textContent=t.fb1;fb.className='fb fb-close';ff.style.background='var(--amber)';if(cocktailPassesIngFilter(c.id))cls++;}
+    else if(miss<=2){fb.textContent=miss+' '+t.fbN;fb.className='fb fb-close';ff.style.background='var(--amber)';}
+    else{fb.textContent=miss+' '+t.fbMiss;fb.className='fb fb-far';ff.style.background='var(--red)';}
+    if(sm) sm.textContent=have+'/'+needed.length;
+  });
+
+  document.getElementById('st-own').textContent=owned.size;
+  document.getElementById('st-rdy').textContent=rdy;
+  document.getElementById('st-cls').textContent=cls;
+  if(buyOpen) renderBuyNext();
+  applyFilter();
+}
+
+function cocktailPassesIngFilter(cid){
+  if(!mustInclude.size) return true;
+  const needed=Object.keys(RECIPES[cid]||{});
+  for(const iid of mustInclude) if(!needed.includes(iid)) return false;
+  return true;
+}
+
+function applyFilter(){
+  COCKTAILS.forEach(c=>{
+    const recipe=RECIPES[c.id]||{};
+    const miss=Object.keys(recipe).filter(i=>!owned.has(i)).length;
+    let show=true;
+    if(activeFilter==='ready') show=miss===0;
+    else if(activeFilter==='close') show=miss<=2;
+    else if(activeFilter==='na') show=c.type==='na';
+    if(show) show=cocktailPassesIngFilter(c.id);
+    document.querySelectorAll('[data-cid="'+c.id+'"]').forEach(el=>el.style.display=show?'':'none');
+  });
+}
+
+// ══════════ BUY NEXT ══════════
+function renderBuyNext(){
+  const t=UI[lang];
+  const catMap=Object.fromEntries(CATS.map(c=>[c.id,c]));
+  const recs=[];
+  INGS.forEach(ing=>{
+    if(owned.has(ing.id)) return;
+    let unlocks=0,close=0;
+    const uNames=[],cNames=[];
+    COCKTAILS.forEach(c=>{
+      if(!cocktailPassesIngFilter(c.id)) return;
+      const recipe=RECIPES[c.id]||{};
+      const needed=Object.keys(recipe);
+      if(!needed.includes(ing.id)) return;
+      const miss=needed.filter(i=>!owned.has(i)).length;
+      if(miss===1){unlocks++;uNames.push(c.name[lang].replace('\n',' '));}
+      else if(miss===2){close++;cNames.push(c.name[lang].replace('\n',' '));}
+    });
+    if(unlocks>0||close>0) recs.push({ing,unlocks,close,uNames,cNames,score:unlocks*5+close});
+  });
+  recs.sort((a,b)=>b.score-a.score);
+  const top=recs.slice(0,8);
+  const container=document.getElementById('buy-cards');
+  if(!top.length){
+    container.innerHTML='<div class="buy-empty">'+(owned.size===0?t.buyEmpty:t.buyAll)+'</div>';
+    return;
+  }
+  const rankColors=['#c9a84c','#a0a0b0','#c07050','#888','#888','#888','#888','#888'];
+  container.innerHTML=top.map((r,i)=>{
+    const cat=catMap[r.ing.cat]||{};
+    return '<div class="buy-card"><div style="position:absolute;top:0;left:0;width:3px;height:100%;background:'+(cat.color||'#888')+'"></div><div class="buy-rank" style="color:'+rankColors[i]+'">'+(i+1)+'</div><div class="buy-name">'+r.ing.name[lang]+'</div><span class="buy-cat" style="color:'+(cat.color||'#888')+'">'+(cat.label[lang]||'')+'</span>'+(r.unlocks>0?'<div class="buy-unlocks">\uD83D\uDD13 '+t.unlocks+' '+r.unlocks+' '+t.unlocksSfx+'</div><div class="buy-names">'+r.uNames.join(' \u00b7 ')+'</div>':'')+(r.close>0?'<div class="buy-close" style="margin-top:'+(r.unlocks>0?'5':'0')+'px">\u2191 '+t.closerPfx+' '+r.close+' '+t.closerSfx+'</div><div class="buy-names">'+r.cNames.join(' \u00b7 ')+'</div>':'')+'</div>';
+  }).join('');
+}
+
+
+// ══════════ ING FILTER ══════════
+function initIngFilter(){
+  const t=UI[lang];
+  const sel=document.getElementById('ing-sel');
+  const prev=sel.value;
+  sel.innerHTML='<option value="">'+t.ifbAdd+'</option>';
+  CATS.forEach(cat=>{
+    const grp=document.createElement('optgroup');
+    grp.label=cat.label[lang];
+    INGS.filter(i=>i.cat===cat.id).forEach(ing=>{
+      const opt=document.createElement('option');
+      opt.value=ing.id; opt.textContent=ing.name[lang];
+      if(mustInclude.has(ing.id)) opt.disabled=true;
+      grp.appendChild(opt);
+    });
+    sel.appendChild(grp);
+  });
+  sel.value='';
+  document.getElementById('ing-bar-label').textContent=t.ifbLabel;
+  document.getElementById('ing-clear').textContent=t.ifbClear;
+  sel.onchange=e=>{
+    const iid=e.target.value; if(!iid) return;
+    mustInclude.add(iid); sel.value='';
+    renderIngChips(); refresh();
+  };
+  document.getElementById('ing-clear').onclick=()=>{
+    mustInclude.clear(); renderIngChips(); refresh();
+  };
+}
+
+function renderIngChips(){
+  const t=UI[lang];
+  const container=document.getElementById('ing-chips');
+  const clearBtn=document.getElementById('ing-clear');
+  if(!mustInclude.size){
+    container.innerHTML='<span class="ing-hint">'+t.ifbHint+'</span>';
+    clearBtn.style.display='none';
+  } else {
+    container.innerHTML=[...mustInclude].map(iid=>{
+      const ing=INGS.find(i=>i.id===iid);
+      return '<div class="ing-chip">'+(ing?ing.name[lang]:iid)+'<span class="ing-chip-x" data-iid="'+iid+'">×</span></div>';
+    }).join('');
+    clearBtn.style.display='';
+    container.querySelectorAll('.ing-chip-x').forEach(x=>{
+      x.onclick=()=>{ mustInclude.delete(x.dataset.iid); renderIngChips(); initIngFilter(); refresh(); };
+    });
+  }
+  // disable already-selected options
+  document.querySelectorAll('#ing-sel option').forEach(o=>{ o.disabled=mustInclude.has(o.value); });
+}
+
+// ══════════ EVENTS ══════════
+document.querySelectorAll('.fbtn').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    activeFilter=e.target.dataset.f;
+    applyFilter();
+  });
+});
+
+document.getElementById('buy-toggle').addEventListener('click',()=>{
+  buyOpen=!buyOpen;
+  document.getElementById('buy-content').classList.toggle('open',buyOpen);
+  document.getElementById('buy-arrow').style.transform=buyOpen?'rotate(90deg)':'rotate(0deg)';
+  document.getElementById('buy-toggle-txt').textContent=buyOpen?UI[lang].buyHide:UI[lang].buyShow;
+  if(buyOpen) renderBuyNext();
+});
+
+document.querySelectorAll('.lang-btn').forEach(btn=>{
+  btn.addEventListener('click',e=>{
+    document.querySelectorAll('.lang-btn').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    lang=e.target.dataset.l;
+    applyLangUI();
+    buildTable();
+    initIngFilter();
+    renderIngChips();
+  });
+});
+
+// ══════════ INIT ══════════
+applyLangUI();
+buildTable();
+initIngFilter();
+renderIngChips();
+</script>
+</body>
+</html>
